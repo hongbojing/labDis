@@ -10,9 +10,9 @@ def train(worker, n_workers):
     torch.manual_seed(hps.seed)
     train_set, bsz = partition_dataset()
     model = Net()
-    model = model.cuda(worker)
     optimizer = torch.optim.SGD(model.parameters(),
                           lr=0.01, momentum=0.5)
+    model.cuda(worker)
 
     num_batches = int(len(train_set.dataset) / float(bsz))
     for epoch in range(hps.n_epochs):
@@ -33,6 +33,7 @@ def train(worker, n_workers):
 
 def average_gradients(model):
     size = float(dist.get_world_size())
+
     for param in model.parameters():
         dist.all_reduce(param.grad.data, op=dist.reduce_op.SUM)
         param.grad.data /= size
