@@ -7,19 +7,20 @@ import hps
 
 
 def train(worker, n_workers):
+    device = torch.device('cuda:'+str(worker))
     torch.manual_seed(hps.seed)
     train_set, bsz = partition_dataset()
     model = Net()
     optimizer = torch.optim.SGD(model.parameters(),
                           lr=0.01, momentum=0.5)
-    model.cuda(worker)
+    model.cuda(device)
 
     num_batches = int(len(train_set.dataset) / float(bsz))
     for epoch in range(hps.n_epochs):
         epoch_loss = 0.0
         for data, target in train_set:
-            data = data.cuda(worker)
-            target = target.cuda(worker)
+            data = data.cuda(device)
+            target = target.cuda(device)
             optimizer.zero_grad()
             output = model(data)
             loss = F.nll_loss(output, target)
@@ -33,7 +34,6 @@ def train(worker, n_workers):
 
 def average_gradients(model):
     size = float(dist.get_world_size())
-
     for param in model.parameters():
         dist.all_reduce(param.grad.data, op=dist.reduce_op.SUM)
         param.grad.data /= size
